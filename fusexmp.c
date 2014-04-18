@@ -45,6 +45,7 @@
 #include <sys/time.h>
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
+#include <linux/limits.h>
 #endif
 
 //Initialize my private data struct.
@@ -52,6 +53,12 @@ typedef struct{
     char *rootdir;
 }myfs_state;
 
+static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
+{
+    strcpy(fpath, MYDATA->rootdir);
+    strncat(fpath, path, PATH_MAX); // ridiculously long paths will break here
+				    
+}
 
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
@@ -60,9 +67,11 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	//if you get a bogus character or fail to open
 	//modify this function
 	//also POssibly truncate
+	 char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	res = lstat(fpath, stbuf);
 	
-	path = MYDATA->rootdir;
-	res = lstat(path, stbuf);
+	
 	if (res == -1)
 		return -errno;
 
@@ -72,9 +81,10 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 static int xmp_access(const char *path, int mask)
 {
 	int res;
-
-	path = MYDATA->rootdir;
-	res = access(path, mask);
+	char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	
+	res = access(fpath, mask);
 	if (res == -1)
 		return -errno;
 
@@ -84,9 +94,10 @@ static int xmp_access(const char *path, int mask)
 static int xmp_readlink(const char *path, char *buf, size_t size)
 {
 	int res;
-
-	path = MYDATA->rootdir;
-	res = readlink(path, buf, size - 1);
+	char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	
+	res = readlink(fpath, buf, size - 1);
 	if (res == -1)
 		return -errno;
 
@@ -98,14 +109,15 @@ static int xmp_readlink(const char *path, char *buf, size_t size)
 static int xmp_readdir(const char *path, void *buf, fuse_fill_dir_t filler,
 		       off_t offset, struct fuse_file_info *fi)
 {
-	path = MYDATA->rootdir;
+	char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 	DIR *dp;
 	struct dirent *de;
 
 	(void) offset;
 	(void) fi;
 
-	dp = opendir(path);
+	dp = opendir(fpath);
 	if (dp == NULL)
 		return -errno;
 
@@ -270,7 +282,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
 
-	path = MYDATA->rootdir;
+	
 	res = open(path, fi->flags);
 	if (res == -1)
 		return -errno;
