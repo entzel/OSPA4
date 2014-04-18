@@ -67,7 +67,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	//if you get a bogus character or fail to open
 	//modify this function
 	//also POssibly truncate
-	 char fpath[PATH_MAX];
+    char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 	res = lstat(fpath, stbuf);
 	
@@ -138,17 +138,18 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 {
 	int res;
 
-	path = MYDATA->rootdir;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 	/* On Linux this could just be 'mknod(path, mode, rdev)' but this
 	   is more portable */
 	if (S_ISREG(mode)) {
-		res = open(path, O_CREAT | O_EXCL | O_WRONLY, mode);
+		res = open(fpath, O_CREAT | O_EXCL | O_WRONLY, mode);
 		if (res >= 0)
 			res = close(res);
 	} else if (S_ISFIFO(mode))
-		res = mkfifo(path, mode);
+		res = mkfifo(fpath, mode);
 	else
-		res = mknod(path, mode, rdev);
+		res = mknod(fpath, mode, rdev);
 	if (res == -1)
 		return -errno;
 
@@ -158,9 +159,10 @@ static int xmp_mknod(const char *path, mode_t mode, dev_t rdev)
 static int xmp_mkdir(const char *path, mode_t mode)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
-	res = mkdir(path, mode);
+	res = mkdir(fpath, mode);
 	if (res == -1)
 		return -errno;
 
@@ -170,8 +172,9 @@ static int xmp_mkdir(const char *path, mode_t mode)
 static int xmp_unlink(const char *path)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	res = unlink(path);
 	if (res == -1)
 		return -errno;
@@ -182,8 +185,9 @@ static int xmp_unlink(const char *path)
 static int xmp_rmdir(const char *path)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	res = rmdir(path);
 	if (res == -1)
 		return -errno;
@@ -227,9 +231,10 @@ static int xmp_link(const char *from, const char *to)
 static int xmp_chmod(const char *path, mode_t mode)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
-	res = chmod(path, mode);
+	res = chmod(fpath, mode);
 	if (res == -1)
 		return -errno;
 
@@ -239,9 +244,10 @@ static int xmp_chmod(const char *path, mode_t mode)
 static int xmp_chown(const char *path, uid_t uid, gid_t gid)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
-	res = lchown(path, uid, gid);
+	res = lchown(fpath, uid, gid);
 	if (res == -1)
 		return -errno;
 
@@ -251,9 +257,10 @@ static int xmp_chown(const char *path, uid_t uid, gid_t gid)
 static int xmp_truncate(const char *path, off_t size)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
-	res = truncate(path, size);
+	res = truncate(fpath, size);
 	if (res == -1)
 		return -errno;
 
@@ -264,14 +271,15 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 {
 	int res;
 	struct timeval tv[2];
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	tv[0].tv_sec = ts[0].tv_sec;
 	tv[0].tv_usec = ts[0].tv_nsec / 1000;
 	tv[1].tv_sec = ts[1].tv_sec;
 	tv[1].tv_usec = ts[1].tv_nsec / 1000;
 
-	res = utimes(path, tv);
+	res = utimes(fpath, tv);
 	if (res == -1)
 		return -errno;
 
@@ -281,9 +289,11 @@ static int xmp_utimens(const char *path, const struct timespec ts[2])
 static int xmp_open(const char *path, struct fuse_file_info *fi)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
 	
-	res = open(path, fi->flags);
+	res = open(fpath, fi->flags);
 	if (res == -1)
 		return -errno;
 
@@ -296,10 +306,11 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 {
 	int fd;
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	(void) fi;
-	fd = open(path, O_RDONLY);
+	fd = open(fpath, O_RDONLY);
 	if (fd == -1)
 		return -errno;
 
@@ -316,10 +327,11 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 {
 	int fd;
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	(void) fi;
-	fd = open(path, O_WRONLY);
+	fd = open(fpath, O_WRONLY);
 	if (fd == -1)
 		return -errno;
 
@@ -334,9 +346,10 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 static int xmp_statfs(const char *path, struct statvfs *stbuf)
 {
 	int res;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
-	res = statvfs(path, stbuf);
+	res = statvfs(fpath, stbuf);
 	if (res == -1)
 		return -errno;
 
@@ -346,10 +359,11 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
 
     (void) fi;
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
     int res;
-    res = creat(path, mode);
+    res = creat(fpath, mode);
     if(res == -1)
 	return -errno;
 
@@ -363,8 +377,9 @@ static int xmp_release(const char *path, struct fuse_file_info *fi)
 {
 	/* Just a stub.	 This method is optional and can safely be left
 	   unimplemented */
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	(void) path;
 	(void) fi;
 	return 0;
@@ -375,8 +390,9 @@ static int xmp_fsync(const char *path, int isdatasync,
 {
 	/* Just a stub.	 This method is optional and can safely be left
 	   unimplemented */
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
 
-	path = MYDATA->rootdir;
 	(void) path;
 	(void) isdatasync;
 	(void) fi;
@@ -387,8 +403,9 @@ static int xmp_fsync(const char *path, int isdatasync,
 static int xmp_setxattr(const char *path, const char *name, const char *value,
 			size_t size, int flags)
 {
-	path = MYDATA->rootdir;
-	int res = lsetxattr(path, name, value, size, flags);
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lsetxattr(fpath, name, value, size, flags);
 	if (res == -1)
 		return -errno;
 	return 0;
@@ -397,8 +414,9 @@ static int xmp_setxattr(const char *path, const char *name, const char *value,
 static int xmp_getxattr(const char *path, const char *name, char *value,
 			size_t size)
 {
-	path = MYDATA->rootdir;
-	int res = lgetxattr(path, name, value, size);
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lgetxattr(fpath, name, value, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -406,8 +424,9 @@ static int xmp_getxattr(const char *path, const char *name, char *value,
 
 static int xmp_listxattr(const char *path, char *list, size_t size)
 {
-	path = MYDATA->rootdir;
-	int res = llistxattr(path, list, size);
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = llistxattr(fpath, list, size);
 	if (res == -1)
 		return -errno;
 	return res;
@@ -415,8 +434,9 @@ static int xmp_listxattr(const char *path, char *list, size_t size)
 
 static int xmp_removexattr(const char *path, const char *name)
 {
-	path = MYDATA->rootdir;
-	int res = lremovexattr(path, name);
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lremovexattr(fpath, name);
 	if (res == -1)
 		return -errno;
 	return 0;
