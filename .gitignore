@@ -22,3 +22,7 @@ aes-crypt-util
 handout/*.log
 handout/*.out
 handout/*.aux
+
+#Mounted filesystems
+test/*
+testdir/*
