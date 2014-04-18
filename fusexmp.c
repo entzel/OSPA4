@@ -175,7 +175,7 @@ static int xmp_unlink(const char *path)
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
-	res = unlink(path);
+	res = unlink(fpath);
 	if (res == -1)
 		return -errno;
 
@@ -380,7 +380,7 @@ static int xmp_release(const char *path, struct fuse_file_info *fi)
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
-	(void) path;
+	(void) fpath;
 	(void) fi;
 	return 0;
 }
@@ -393,7 +393,7 @@ static int xmp_fsync(const char *path, int isdatasync,
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
-	(void) path;
+	(void) fpath;
 	(void) isdatasync;
 	(void) fi;
 	return 0;
