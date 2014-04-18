@@ -62,6 +62,8 @@ static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
 
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
+	//add ecryption to this as an attribute
+	
 	int res;
 	//use cat for context 
 	//if you get a bogus character or fail to open
@@ -300,7 +302,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 	close(res);
 	return 0;
 }
-
+//This needs added support for encryption
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
@@ -321,7 +323,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	close(fd);
 	return res;
 }
-
+//This needs added support for encryption
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
@@ -357,7 +359,7 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 }
 
 static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
-
+//add encryption support
     (void) fi;
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
