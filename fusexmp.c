@@ -188,7 +188,7 @@ static int xmp_rmdir(const char *path)
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
-	res = rmdir(path);
+	res = rmdir(fpath);
 	if (res == -1)
 		return -errno;
 
