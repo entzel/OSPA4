@@ -34,21 +34,24 @@
 /* For pread()/pwrite() */
 #define _XOPEN_SOURCE 500
 #endif
-#include <stdlib.h>
 #include <fuse.h>
-#include "aes-crypt.h"
 #include <stdio.h>
+#include <stdlib.h>
 #include <string.h>
 #include <unistd.h>
 #include <fcntl.h>
 #include <dirent.h>
 #include <errno.h>
 #include <sys/time.h>
+#include <linux/limits.h>
+#include <ctype.h>
+#include <libgen.h>
+#include "aes-crypt.h"
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
-#include <linux/limits.h>
+#include <sys/types.h>
 #endif
-
+//int do_crypt(FILE* in, FILE* out, int action, char* key_str);
 //Initialize my private data struct.
 typedef struct{
     char *rootdir;
@@ -379,7 +382,7 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
 	
-	
+	fclose(newres);
 	fclose(tmp);
     close(res);
 
