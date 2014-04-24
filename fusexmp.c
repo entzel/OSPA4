@@ -57,6 +57,7 @@
 //Initialize my private data struct.
 typedef struct{
     char *rootdir;
+    char *passphrase;
 }myfs_state;
 
 static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
@@ -312,21 +313,33 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
-	int fd;
+	FILE* fp, *memfp;
+	char *memdata;
+	size_t memsize;
 	int res;
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
 	(void) fi;
-	fd = open(fpath, O_RDONLY);
-	if (fd == -1)
+	fp = fopen(fpath, "r");
+	if (fp == NULL)
 		return -errno;
 
-	res = pread(fd, buf, size, offset);
+	memfp = open_memstream(&memdata, &memsize);
+	if (memfp == NULL)
+		return -errno;
+
+	do_crypt(fp,memfp, 0, MYDATA->passphrase);
+	fclose(fp);
+
+	fflush(memfp);
+	fseek(memfp, offset, SEEK_SET);
+
+	res = fread(buf, 1, size, memfp);
 	if (res == -1)
 		res = -errno;
 
-	close(fd);
+	fclose(memfp);
 	return res;
 }
 //This needs added support for encryption
