@@ -36,7 +36,7 @@
 #endif
 #include <stdlib.h>
 #include <fuse.h>
-#include <aes-crypt.h>
+#include "aes-crypt.h"
 #include <stdio.h>
 #include <string.h>
 #include <unistd.h>
