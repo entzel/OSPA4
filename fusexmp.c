@@ -360,7 +360,7 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 }
 
 static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
-//add encryption support
+//added encryption support for creating a file
     (void) fi;
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
@@ -369,7 +369,18 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
     res = creat(fpath, mode);
     if(res == -1)
 	return -errno;
-
+	
+	//get the file pointer we created and encrypt the file
+	int crypt;
+	FILE* tmp;
+	FILE* newres;
+	tmp = fdopen(res, "r+");
+	crypt = do_crypt(tmp, newres, 1, "turtle");
+	//if encryption fails return error
+	if(crypt == FAILURE) return -errno;
+	
+	
+	fclose(tmp);
     close(res);
 
     return 0;
