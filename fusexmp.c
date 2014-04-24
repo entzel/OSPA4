@@ -375,17 +375,15 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	
 	//get the file pointer we created and encrypt the file
 	int crypt;
-	FILE* tmp;
-	FILE* newres = NULL;
-	tmp = fdopen(res, "r+");
-	crypt = do_crypt(tmp, newres, 1, "turtle");
+	FILE* newres;
+	newres = fdopen(res, "w");
+	close(res);
+	crypt = do_crypt(newres, newres, 1, "turtle");
+	
 	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
-	
 	fclose(newres);
-	fclose(tmp);
-    close(res);
-
+	    
     return 0;
 }
 
