@@ -33,6 +33,8 @@
 #ifdef linux
 /* For pread()/pwrite() */
 #define _XOPEN_SOURCE 500
+/* For open_memstream() */
+#define _POSIX_C_SOURCE 200809L
 #endif
 #include <fuse.h>
 #include <stdio.h>
@@ -331,21 +333,39 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
-	int fd;
+    FILE *fp, *memfp;
 	int res;
+    char *memdata;
+    size_t memsize;
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
 	(void) fi;
-	fd = open(fpath, O_WRONLY);
-	if (fd == -1)
+    fp = fopen(fpath, "r");
+	if (fp == NULL) 
+        return -errno; 
+
+    memfp = open_memstream(&memdata, &memsize);
+	if (memfp == NULL)
 		return -errno;
 
-	res = pwrite(fd, buf, size, offset);
-	if (res == -1)
-		res = -errno;
+    do_crypt(fp, memfp, 0, "turtle");
+    fclose(fp);
 
-	close(fd);
+    fseek(memfp, offset, SEEK_SET);
+    res = fwrite(buf, 1, size, memfp);
+	if (res == -1)
+		return -errno;
+    fflush(memfp);
+
+    fp = fopen(fpath, "w");
+    fseek(memfp, 0, SEEK_SET);
+    do_crypt(memfp, fp, 1, "turtle");
+
+    fclose(memfp);
+    fclose(fp);
+
+
 	return res;
 }
 
