@@ -368,17 +368,14 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
-    int res;
-    res = creat(fpath, mode);
+    int res = creat(fpath, mode);
     if(res == -1)
 	return -errno;
 	
 	//get the file pointer we created and encrypt the file
-	int crypt;
-	FILE* newres;
-	newres = fdopen(res, "w");
+	FILE* newres = fdopen(res, "w");
 	close(res);
-	crypt = do_crypt(newres, newres, 1, "turtle");
+	int crypt = do_crypt(newres, newres, 1, "turtle");
 	
 	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
