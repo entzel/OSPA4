@@ -144,7 +144,7 @@ static int is_encrypted(const char *path){
 	
 	//get the value of the attribute
 	
-	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
+	valuelength = xmp_getxattr(path, ENCRYPTED, value, valuelength);
 	
 	//check if it is encrypted
 	if (&value == 1){
