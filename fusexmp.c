@@ -311,7 +311,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 	close(res);
 	return 0;
 }
-//This needs added support for encryption
+//Added support for encryption
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
@@ -319,32 +319,42 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	char *memdata;
 	size_t memsize;
 	int res;
+	//Updates path to full directory path
     char fpath[PATH_MAX];
 	xmp_fullpath(fpath, path);
 
 	(void) fi;
+	//open the file we want to read
 	fp = fopen(fpath, "r");
 	if (fp == NULL)
 		return -errno;
-
+		
+	//memstream sets the values for data and size
+	//opens a stream of memory for us to access
 	memfp = open_memstream(&memdata, &memsize);
 	if (memfp == NULL)
 		return -errno;
-
+		
+	//decrypt the file, and store it in that memory stream so we can read it
 	do_crypt(fp, memfp, 0, MYDATA->passphrase);
+	//close the file on disk, done reading it
 	fclose(fp);
-
+	
+	//wait until file is done being written to memory
+	//fseek, travel to the offset of the file to begin reading
 	fflush(memfp);
 	fseek(memfp, offset, SEEK_SET);
-
+	
+	//read data elements into buffer from memorystream
 	res = fread(buf, 1, size, memfp);
 	if (res == -1)
 		res = -errno;
-
+		
+	//close memory stream, read complete
 	fclose(memfp);
 	return res;
 }
-//This needs added support for encryption
+//Added support for encryption
 static int xmp_write(const char *path, const char *buf, size_t size,
 		     off_t offset, struct fuse_file_info *fi)
 {
@@ -356,27 +366,37 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	xmp_fullpath(fpath, path);
 
 	(void) fi;
+	//open file we want to write to
     fp = fopen(fpath, "r");
 	if (fp == NULL) 
         return -errno; 
-
+        
+	//create a memorystream for the file, we will first decrypt and read
     memfp = open_memstream(&memdata, &memsize);
 	if (memfp == NULL)
 		return -errno;
-
+	
+	//decrypt the file we want to write to, put the decrypted file in the memory
+	//stream for safekeeping, close the file
     do_crypt(fp, memfp, 0, PASSPHRASE);
+
     fclose(fp);
 
+	//travel to the offset we want to write to in the file located in memory stream
     fseek(memfp, offset, SEEK_SET);
     res = fwrite(buf, 1, size, memfp);
 	if (res == -1)
 		return -errno;
     fflush(memfp);
-
+	
+	//open the file, we will do our write now
+	//travel to the offset of the decrypted file
+	//encrypt the in-stream file and store it in it's original location
     fp = fopen(fpath, "w");
     fseek(memfp, 0, SEEK_SET);
     do_crypt(memfp, fp, 1, PASSPHRASE);
 
+	//close the memorystream that held the file, close the file
     fclose(memfp);
     fclose(fp);
 
