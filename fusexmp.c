@@ -313,7 +313,7 @@ static int xmp_open(const char *path, struct fuse_file_info *fi)
 static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		    struct fuse_file_info *fi)
 {
-	FILE* fp, *memfp;
+	FILE *fp, *memfp;
 	char *memdata;
 	size_t memsize;
 	int res;
@@ -329,7 +329,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	if (memfp == NULL)
 		return -errno;
 
-	do_crypt(fp,memfp, 0, MYDATA->passphrase);
+	do_crypt(fp, memfp, 0, MYDATA->passphrase);
 	fclose(fp);
 
 	fflush(memfp);
@@ -536,6 +536,7 @@ int main(int argc, char *argv[])
     // Pull the rootdir out of the argument list and save it in my
     // internal data
     myfsData->rootdir = realpath(argv[argc-2], NULL);
+    myfsData->passphrase = "turtle";
     argv[argc-2] = argv[argc-1];
     argv[argc-1] = NULL;
     argc--;
