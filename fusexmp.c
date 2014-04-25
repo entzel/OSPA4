@@ -21,6 +21,7 @@
         open() and close() calls and support fh dependent functions.
 
 */
+static const char ENCRYPTED[] = "encrypted";
 
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
@@ -70,7 +71,28 @@ static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
     strncat(fpath, path, PATH_MAX); // ridiculously long paths will break here
 				    
 }
-
+static int is_encrypted(const char *path){
+	size_t valuelength;
+	int* value;
+	
+	//get the length of the memory space for the attribute
+	valuelength = xmp_getxattr(path, ENCRYPTED, NULL, 0);
+	if (valuelength != sizeof(int)){
+		return -errno;
+	}
+	
+	//allocate space for the value
+	value = malloc(sizeof(int));
+	
+	//get the value of the attribute
+	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
+	
+	//check if it is encrypted
+	if (&value == 1){
+		return 1;
+	}
+	return 0;
+}
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -81,9 +103,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	FILE* memfp;
 	int memfd;
 	FILE* fp;
-	int encrypted;
-
-	xmp_getxattr(fpath, "encrypted", &encrypted, 1);
+	
 	if (encrypted == 1){
 	//want to decrypt the file so we can return the decrypted attribute
 	fp = fopen(fpath, "r");
