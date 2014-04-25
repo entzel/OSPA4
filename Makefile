@@ -67,5 +67,10 @@ clean:
 	rm -f handout/*.aux
 	rm -f handout/*.out
 
+# for easy running of the fusexmp method on Taylor's machine :)
+mounttsg:
+	./fusexmp /home/tsg9292/ test turtle
+unmounttsg:
+	fusermount -u test
 
 

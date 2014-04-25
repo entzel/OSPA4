@@ -457,8 +457,6 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	FILE* newres = fdopen(res, "w");
 	close(res);
 	int crypt = do_crypt(newres, newres, ENCRYPT, PASSPHRASE);
-	
-	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
 	fclose(newres);
 	    
@@ -572,13 +570,15 @@ int main(int argc, char *argv[])
 {
 	myfs_state *myfsData;
 	umask(0);
-	if ((argc < 3) || (argv[argc-2][0] == '-') || (argv[argc-1][0] == '-'))
-	return 1;
+	if ((argc < 4) || (argv[argc-2][0] == '-') || (argv[argc-1][0] == '-')){
+		printf("Usage: <mount directory> <mount point> <encryption keyphrase>");
+		return 1;
+	}
 	
     myfsData = malloc(sizeof(myfs_state));
     if (myfsData == NULL) {
-	perror("main calloc");
-	abort();
+		perror("main calloc");
+		abort();
     }
 
     // Pull the rootdir out of the argument list and save it in my
@@ -592,6 +592,5 @@ int main(int argc, char *argv[])
     argv[argc-1] = NULL;
     argc--;
 
-	
 	return fuse_main(argc, argv, &xmp_oper, myfsData);
 }
