@@ -22,14 +22,11 @@
 
 */
 static const char ENCRYPTED[] = "encrypted";
-
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
 #define MYDATA ((myfs_state *) fuse_get_context()->private_data)
 
-#ifdef HAVE_CONFIG_H
-#include <config.h>
-#endif
+
 
 #ifdef linux
 /* For pread()/pwrite() */
@@ -49,15 +46,29 @@ static const char ENCRYPTED[] = "encrypted";
 #include <linux/limits.h>
 #include <ctype.h>
 #include <libgen.h>
-#include "aes-crypt.h"
+
 #ifdef HAVE_SETXATTR
 #include <sys/xattr.h>
 #include <sys/types.h>
 #endif
 
+#include "aes-crypt.h"
+
 #define PASSPHRASE "turtle"
 #define ENCRYPT 1
 #define DECRYPT 0
+#define ENCRYPT_FLAG "user.encrypted"
+
+#define SUFFIXGETATTR ".getattr"
+#define SUFFIXREAD ".read"
+#define SUFFIXWRITE ".write"
+#define SUFFIXCREATE ".create"
+#ifdef HAVE_CONFIG_H
+#include <config.h>
+#endif
+
+
+
 //int do_crypt(FILE* in, FILE* out, int action, char* key_str);
 //Initialize my private data struct.
 typedef struct{
@@ -71,28 +82,53 @@ static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
     strncat(fpath, path, PATH_MAX); // ridiculously long paths will break here
 				    
 }
-static int is_encrypted(const char *path){
-	size_t valuelength;
-	int* value;
-	
-	//get the length of the memory space for the attribute
-	valuelength = xmp_getxattr(path, ENCRYPTED, NULL, 0);
-	if (valuelength != sizeof(int)){
+
+#ifdef HAVE_SETXATTR
+static int xmp_setxattr(const char *path, const char *name, const char *value,
+			size_t size, int flags)
+{
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lsetxattr(fpath, name, value, size, flags);
+	if (res == -1)
 		return -errno;
-	}
-	
-	//allocate space for the value
-	value = malloc(sizeof(int));
-	
-	//get the value of the attribute
-	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
-	
-	//check if it is encrypted
-	if (&value == 1){
-		return 1;
-	}
 	return 0;
 }
+
+static int xmp_getxattr(const char *path, const char *name, char *value,
+			size_t size)
+{
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lgetxattr(fpath, name, value, size);
+	if (res == -1)
+		return -errno;
+	return res;
+}
+
+static int xmp_listxattr(const char *path, char *list, size_t size)
+{
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = llistxattr(fpath, list, size);
+	if (res == -1)
+		return -errno;
+	return res;
+}
+
+static int xmp_removexattr(const char *path, const char *name)
+{
+    char fpath[PATH_MAX];
+	xmp_fullpath(fpath, path);
+	int res = lremovexattr(fpath, name);
+	if (res == -1)
+		return -errno;
+	return 0;
+}
+#endif /* HAVE_SETXATTR */
+//mapping/jump table of bfs functions 
+//map to system calls
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -468,6 +504,29 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 
 	return 0;
 }
+static int is_encrypted(const char *path){
+	size_t valuelength;
+	int* value;
+	
+	//get the length of the memory space for the attribute
+	valuelength = xmp_getxattr(path, "user.encrypted", NULL, 0);
+	if (valuelength != sizeof(int)){
+		return -errno;
+	}
+	
+	//allocate space for the value
+	value = malloc(sizeof(int));
+	
+	//get the value of the attribute
+	
+	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
+	
+	//check if it is encrypted
+	if (&value == 1){
+		return 1;
+	}
+	return 0;
+}
 
 static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) {
 //added encryption support for creating a file
@@ -480,13 +539,13 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	return -errno;
 	
 	//get the file pointer we created and encrypt the file
-	FILE* newres = fdopen(res, "w");
+	FILE* newres = fdopen(res, "wb+");
 	close(res);
 	int crypt = do_crypt(newres, newres, ENCRYPT, PASSPHRASE);
 	if(crypt == FAILURE) return -errno;
 
 	//create the encrypted flag to mark the file as encrypted at creation
-	xmp_setxattr(fpath, "encrypted", 1, 1);
+	xmp_setxattr(fpath, "user.encrypted", 1, sizeof(int), NULL);
 	fclose(newres);
     return 0;
 }
@@ -518,51 +577,7 @@ static int xmp_fsync(const char *path, int isdatasync,
 	return 0;
 }
 
-#ifdef HAVE_SETXATTR
-static int xmp_setxattr(const char *path, const char *name, const char *value,
-			size_t size, int flags)
-{
-    char fpath[PATH_MAX];
-	xmp_fullpath(fpath, path);
-	int res = lsetxattr(fpath, name, value, size, flags);
-	if (res == -1)
-		return -errno;
-	return 0;
-}
 
-static int xmp_getxattr(const char *path, const char *name, char *value,
-			size_t size)
-{
-    char fpath[PATH_MAX];
-	xmp_fullpath(fpath, path);
-	int res = lgetxattr(fpath, name, value, size);
-	if (res == -1)
-		return -errno;
-	return res;
-}
-
-static int xmp_listxattr(const char *path, char *list, size_t size)
-{
-    char fpath[PATH_MAX];
-	xmp_fullpath(fpath, path);
-	int res = llistxattr(fpath, list, size);
-	if (res == -1)
-		return -errno;
-	return res;
-}
-
-static int xmp_removexattr(const char *path, const char *name)
-{
-    char fpath[PATH_MAX];
-	xmp_fullpath(fpath, path);
-	int res = lremovexattr(fpath, name);
-	if (res == -1)
-		return -errno;
-	return 0;
-}
-#endif /* HAVE_SETXATTR */
-//mapping/jump table of bfs functions 
-//map to system calls
 static struct fuse_operations xmp_oper = {
 	.getattr	= xmp_getattr,
 	.access		= xmp_access,
