@@ -55,6 +55,8 @@
 #endif
 
 #define PASSPHRASE "turtle"
+#define ENCRYPT 1
+#define DECRYPT 0
 //int do_crypt(FILE* in, FILE* out, int action, char* key_str);
 //Initialize my private data struct.
 typedef struct{
@@ -92,7 +94,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 		return -errno;
 		
 	//decrypt the file, and store it in that memory stream so we can read it
-	do_crypt(fp, memfp, 0, MYDATA->passphrase);
+	do_crypt(fp, memfp, DECRYPT, MYDATA->passphrase);
 	//close the file on disk, done reading it
 	fclose(fp);
 	
@@ -360,7 +362,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		return -errno;
 		
 	//decrypt the file, and store it in that memory stream so we can read it
-	do_crypt(fp, memfp, 0, MYDATA->passphrase);
+	do_crypt(fp, memfp, DECRYPT, MYDATA->passphrase);
 	//close the file on disk, done reading it
 	fclose(fp);
 	
@@ -402,7 +404,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	
 	//decrypt the file we want to write to, put the decrypted file in the memory
 	//stream for safekeeping, close the file
-    do_crypt(fp, memfp, 0, PASSPHRASE);
+    do_crypt(fp, memfp, DECRYPT, PASSPHRASE);
 
     fclose(fp);
 
@@ -418,7 +420,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	//encrypt the in-stream file and store it in it's original location
     fp = fopen(fpath, "w");
     fseek(memfp, 0, SEEK_SET);
-    do_crypt(memfp, fp, 1, PASSPHRASE);
+    do_crypt(memfp, fp, ENCRYPT, PASSPHRASE);
 
 	//close the memorystream that held the file, close the file
     fclose(memfp);
@@ -454,7 +456,7 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	//get the file pointer we created and encrypt the file
 	FILE* newres = fdopen(res, "w");
 	close(res);
-	int crypt = do_crypt(newres, newres, 1, PASSPHRASE);
+	int crypt = do_crypt(newres, newres, ENCRYPT, PASSPHRASE);
 	
 	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
