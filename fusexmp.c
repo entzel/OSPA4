@@ -21,11 +21,10 @@
         open() and close() calls and support fh dependent functions.
 
 */
-static const char ENCRYPTED[] = "encrypted";
-
 #define FUSE_USE_VERSION 28
 #define HAVE_SETXATTR
 #define MYDATA ((myfs_state *) fuse_get_context()->private_data)
+#define ENCRYPTED "user.pa4-encfs.encrypted"
 
 #ifdef HAVE_CONFIG_H
 #include <config.h>
@@ -71,6 +70,7 @@ static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
     strncat(fpath, path, PATH_MAX); // ridiculously long paths will break here
 				    
 }
+
 static int is_encrypted(const char *path){
 	size_t valuelength;
 	int* value;
@@ -93,6 +93,7 @@ static int is_encrypted(const char *path){
 	}
 	return 0;
 }
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -104,7 +105,7 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	int memfd;
 	FILE* fp;
 	
-	if (encrypted == 1){
+	if (is_encrypted(fpath) == 1){
 	//want to decrypt the file so we can return the decrypted attribute
 	fp = fopen(fpath, "r");
 	if (fp == NULL)
