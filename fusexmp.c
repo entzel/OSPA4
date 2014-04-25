@@ -81,7 +81,10 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	FILE* memfp;
 	int memfd;
 	FILE* fp;
-	
+	int encrypted;
+
+	xmp_getxattr(fpath, "encrypted", &encrypted, 1);
+	if (encrypted == 1){
 	//want to decrypt the file so we can return the decrypted attribute
 	fp = fopen(fpath, "r");
 	if (fp == NULL)
@@ -107,12 +110,15 @@ static int xmp_getattr(const char *path, struct stat *stbuf)
 	
 	//find the attribute from the decrypted file in the memorystream
 	res = fstat(memfd, stbuf);
-	
+	}
+	else res = lstat(fpath, stbuf);
+
 	
 	if (res == -1)
 		return -errno;
 
 	return 0;
+
 }
 
 static int xmp_access(const char *path, int mask)
@@ -460,7 +466,7 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	if(crypt == FAILURE) return -errno;
 
 	//create the encrypted flag to mark the file as encrypted at creation
-	xmp_setxattr(fpath, "encrypted", 1, , int flags)
+	xmp_setxattr(fpath, "encrypted", 1, 1);
 	fclose(newres);
     return 0;
 }
