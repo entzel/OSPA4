@@ -53,6 +53,8 @@
 #include <sys/xattr.h>
 #include <sys/types.h>
 #endif
+
+#define PASSPHRASE "turtle"
 //int do_crypt(FILE* in, FILE* out, int action, char* key_str);
 //Initialize my private data struct.
 typedef struct{
@@ -362,7 +364,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 	if (memfp == NULL)
 		return -errno;
 
-    do_crypt(fp, memfp, 0, "turtle");
+    do_crypt(fp, memfp, 0, PASSPHRASE);
     fclose(fp);
 
     fseek(memfp, offset, SEEK_SET);
@@ -373,7 +375,7 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
     fp = fopen(fpath, "w");
     fseek(memfp, 0, SEEK_SET);
-    do_crypt(memfp, fp, 1, "turtle");
+    do_crypt(memfp, fp, 1, PASSPHRASE);
 
     fclose(memfp);
     fclose(fp);
@@ -408,7 +410,7 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	//get the file pointer we created and encrypt the file
 	FILE* newres = fdopen(res, "w");
 	close(res);
-	int crypt = do_crypt(newres, newres, 1, "turtle");
+	int crypt = do_crypt(newres, newres, 1, PASSPHRASE);
 	
 	//if encryption fails return error
 	if(crypt == FAILURE) return -errno;
@@ -535,8 +537,11 @@ int main(int argc, char *argv[])
 
     // Pull the rootdir out of the argument list and save it in my
     // internal data
-    myfsData->rootdir = realpath(argv[argc-2], NULL);
-    myfsData->passphrase = "turtle";
+    myfsData->rootdir = realpath(argv[argc-3], NULL);
+    myfsData->passphrase = strncpy(argv[argc-1],argv[argc-1],256);
+    argv[argc-3] = argv[argc-1];
+    argv[argc-1] = NULL;
+    argc--;
     argv[argc-2] = argv[argc-1];
     argv[argc-1] = NULL;
     argc--;
