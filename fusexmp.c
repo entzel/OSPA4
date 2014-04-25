@@ -458,8 +458,10 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	close(res);
 	int crypt = do_crypt(newres, newres, ENCRYPT, PASSPHRASE);
 	if(crypt == FAILURE) return -errno;
+
+	//create the encrypted flag to mark the file as encrypted at creation
+	xmp_setxattr(fpath, "encrypted", 1, , int flags)
 	fclose(newres);
-	    
     return 0;
 }
 
