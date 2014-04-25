@@ -71,16 +71,40 @@ static void xmp_fullpath(char fpath[PATH_MAX], const char *path)
 
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
-	//add ecryption to this as an attribute
-	
 	int res;
-	//use cat for context 
-	//if you get a bogus character or fail to open
-	//modify this function
-	//also POssibly truncate
     char fpath[PATH_MAX];
+    char *memdata;
+    size_t memsize;
 	xmp_fullpath(fpath, path);
-	res = lstat(fpath, stbuf);
+	FILE* memfp;
+	int memfd;
+	FILE* fp;
+	
+	//want to decrypt the file so we can return the decrypted attribute
+	fp = fopen(fpath, "r");
+	if (fp == NULL)
+		return -errno;
+		
+	//memstream sets the values for data and size
+	//opens a stream of memory for us to access
+	memfp = open_memstream(&memdata, &memsize);
+	if (memfp == NULL)
+		return -errno;
+		
+	//decrypt the file, and store it in that memory stream so we can read it
+	do_crypt(fp, memfp, 0, MYDATA->passphrase);
+	//close the file on disk, done reading it
+	fclose(fp);
+	
+	//wait until file is done being written to memory
+	//fseek, travel to the offset of the file to begin reading
+	fflush(memfp);
+	
+	//Get the file descriptor from the file pointer memfp
+	memfd = fileno(memfp);
+	
+	//find the attribute from the decrypted file in the memorystream
+	res = fstat(memfd, stbuf);
 	
 	
 	if (res == -1)
