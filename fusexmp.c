@@ -571,7 +571,7 @@ int main(int argc, char *argv[])
 	myfs_state *myfsData;
 	umask(0);
 	if ((argc < 4) || (argv[argc-2][0] == '-') || (argv[argc-1][0] == '-')){
-		printf("Usage: <mount directory> <mount point> <encryption keyphrase>");
+		printf("Usage: <mount directory> <mount point> <encryption keyphrase> \n");
 		return 1;
 	}
 	
