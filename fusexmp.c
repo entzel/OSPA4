@@ -129,6 +129,30 @@ static int xmp_removexattr(const char *path, const char *name)
 //mapping/jump table of bfs functions 
 //map to system calls
 
+static int is_encrypted(const char *path){
+	size_t valuelength;
+	int* value;
+	
+	//get the length of the memory space for the attribute
+	valuelength = xmp_getxattr(path, "user.encrypted", NULL, 0);
+	if (valuelength != sizeof(int)){
+		return -errno;
+	}
+	
+	//allocate space for the value
+	value = malloc(sizeof(int));
+	
+	//get the value of the attribute
+	
+	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
+	
+	//check if it is encrypted
+	if (&value == 1){
+		return 1;
+	}
+	return 0;
+}
+
 static int xmp_getattr(const char *path, struct stat *stbuf)
 {
 	int res;
@@ -502,29 +526,6 @@ static int xmp_statfs(const char *path, struct statvfs *stbuf)
 	if (res == -1)
 		return -errno;
 
-	return 0;
-}
-static int is_encrypted(const char *path){
-	size_t valuelength;
-	int* value;
-	
-	//get the length of the memory space for the attribute
-	valuelength = xmp_getxattr(path, "user.encrypted", NULL, 0);
-	if (valuelength != sizeof(int)){
-		return -errno;
-	}
-	
-	//allocate space for the value
-	value = malloc(sizeof(int));
-	
-	//get the value of the attribute
-	
-	valuelength = xmp_getattr(path, ENCRYPTED, value, valuelength);
-	
-	//check if it is encrypted
-	if (&value == 1){
-		return 1;
-	}
 	return 0;
 }
 
