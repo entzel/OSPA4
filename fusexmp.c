@@ -57,7 +57,7 @@
 #define PASSPHRASE "turtle"
 #define ENCRYPT 1
 #define DECRYPT 0
-#define ENCRYPT_FLAG "user.encrypted"
+
 
 #define SUFFIXGETATTR ".getattr"
 #define SUFFIXREAD ".read"
@@ -130,7 +130,7 @@ static int xmp_removexattr(const char *path, const char *name)
 //map to system calls
 
 static int is_encrypted(const char *path){
-	size_t valuelength;
+	ssize_t valuelength;
 	char* value;
 	
 	//get the length of the memory space for the attribute
@@ -443,6 +443,9 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 	if (fp == NULL)
 		return -errno;
 		
+	//check if the file is encrypted, decrypt if it is	
+	if(is_encrypted(fpath)){
+		
 	//memstream sets the values for data and size
 	//opens a stream of memory for us to access
 	memfp = open_memstream(&memdata, &memsize);
@@ -451,8 +454,7 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		
 	//decrypt the file, and store it in that memory stream so we can read it
 	do_crypt(fp, memfp, DECRYPT, MYDATA->passphrase);
-	//close the file on disk, done reading it
-	fclose(fp);
+	
 	
 	//wait until file is done being written to memory
 	//fseek, travel to the offset of the file to begin reading
@@ -465,7 +467,13 @@ static int xmp_read(const char *path, char *buf, size_t size, off_t offset,
 		res = -errno;
 		
 	//close memory stream, read complete
+
 	fclose(memfp);
+}
+	else res = fread(buf, 1, size, fp);
+	
+	//close the file on disk, done reading it
+	fclose(fp);
 	return res;
 }
 //Added support for encryption
@@ -484,7 +492,10 @@ static int xmp_write(const char *path, const char *buf, size_t size,
     fp = fopen(fpath, "r");
 	if (fp == NULL) 
         return -errno; 
-        
+    
+    //check if the file is encrypted, encrypt if it is	
+	if(is_encrypted(fpath)){
+		
 	//create a memorystream for the file, we will first decrypt and read
     memfp = open_memstream(&memdata, &memsize);
 	if (memfp == NULL)
@@ -512,6 +523,8 @@ static int xmp_write(const char *path, const char *buf, size_t size,
 
 	//close the memorystream that held the file, close the file
     fclose(memfp);
+	}
+	else res = fwrite(buf, 1, size, fp);
     fclose(fp);
 
 
@@ -542,14 +555,17 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	return -errno;
 	
 	//get the file pointer we created and encrypt the file
-	FILE* newres = fdopen(res, "wb+");
+	FILE* newres = fdopen(res, "w");
 	close(res);
 	int crypt = do_crypt(newres, newres, ENCRYPT, PASSPHRASE);
-	if(crypt == FAILURE) return -errno;
+	if(crypt == FAILURE)
+		return -errno;
+		
+	fclose(newres);
 
 	//create the encrypted flag to mark the file as encrypted at creation
-	xmp_setxattr(fpath, "user.encrypted", "true", 4, NULL);
-	fclose(newres);
+	xmp_setxattr(fpath, ENCRYPTED, "true", 4, 0);
+	
     return 0;
 }
 
