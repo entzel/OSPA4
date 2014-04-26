@@ -131,23 +131,25 @@ static int xmp_removexattr(const char *path, const char *name)
 
 static int is_encrypted(const char *path){
 	size_t valuelength;
-	int* value;
+	char* value;
 	
 	//get the length of the memory space for the attribute
 	valuelength = xmp_getxattr(path, "user.encrypted", NULL, 0);
-	if (valuelength != sizeof(int)){
+	if (valuelength < 0) { 
 		return -errno;
 	}
 	
 	//allocate space for the value
-	value = malloc(sizeof(int));
+	value = malloc(sizeof(*value)*(valuelength+1));
 	
 	//get the value of the attribute
 	
 	valuelength = xmp_getxattr(path, ENCRYPTED, value, valuelength);
+
+    value[valuelength] = '\0';
 	
 	//check if it is encrypted
-	if (&value == 1){
+	if (!strcmp(value, "true")){
 		return 1;
 	}
 	return 0;
@@ -546,7 +548,7 @@ static int xmp_create(const char* path, mode_t mode, struct fuse_file_info* fi) 
 	if(crypt == FAILURE) return -errno;
 
 	//create the encrypted flag to mark the file as encrypted at creation
-	xmp_setxattr(fpath, "user.encrypted", 1, sizeof(int), NULL);
+	xmp_setxattr(fpath, "user.encrypted", "true", 4, NULL);
 	fclose(newres);
     return 0;
 }
